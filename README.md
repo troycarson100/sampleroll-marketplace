@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SampleRoll Marketplace
 
-## Getting Started
+Sample pack marketplace built with **Next.js 14**, **Supabase**, and **Stripe**.
 
-First, run the development server:
+**Repository:** [github.com/troycarson100/sampleroll-marketplace](https://github.com/troycarson100/sampleroll-marketplace)
+
+## Setup
 
 ```bash
+npm install
+# Create .env.local with Supabase + Stripe vars (see project docs / Supabase dashboard)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Copy **Supabase** URL + anon key into `.env.local` (see `src/lib/supabase/client.ts` for required vars).
+- **Stripe** keys and webhook secret for checkout and webhooks.
+- **Never commit** `.env.local` (it is gitignored).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Cursor + Google Stitch MCP (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.cursor/mcp.json` is gitignored because it can hold API keys. Copy `.cursor/mcp.json.example` to `.cursor/mcp.json` and add your key.
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command        | Description                    |
+|----------------|--------------------------------|
+| `npm run dev`  | Next.js dev server             |
+| `npm run dev:clean` | Clear `.next`, then dev   |
+| `npm run build`| Production build               |
+| `npm run lint` | ESLint                         |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Database migrations live under `supabase/migrations/`.
