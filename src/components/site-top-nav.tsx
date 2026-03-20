@@ -9,7 +9,7 @@ const links = [
 
 export function SiteTopNav() {
   return (
-    <header className="border-b border-sr bg-sr-panel">
+    <header className="sticky top-0 z-50 border-b border-sr bg-sr-panel">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"
