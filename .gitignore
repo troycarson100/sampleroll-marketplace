@@ -28,7 +28,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# local env files (never commit secrets)
+.env
+.env.*
+!.env.example
 .env*.local
 
 # Cursor MCP (may contain API keys — copy from mcp.json.example)
