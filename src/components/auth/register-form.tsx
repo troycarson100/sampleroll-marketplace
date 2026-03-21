@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,23 +26,34 @@ export function RegisterForm({ nextPath }: Props) {
     setInfo(null);
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error: signError } = await supabase.auth.signUp({
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+      const data = (await res.json()) as { error?: string; message?: string };
+
+      if (!res.ok) {
+        setError(data.error ?? "Registration failed.");
+        return;
+      }
+
+      if (data.message) {
+        setInfo(data.message);
+      }
+
+      const sign = await signIn("credentials", {
         email: email.trim(),
         password,
+        redirect: false,
       });
-      if (signError) {
-        setError(signError.message);
-        return;
-      }
-      if (data.session) {
+      if (!sign?.error) {
         router.push(safeNextPath(nextPath));
         router.refresh();
-        return;
       }
-      setInfo(
-        "Check your email to confirm your account, then sign in. If confirmations are disabled in Supabase, try signing in now.",
-      );
     } finally {
       setLoading(false);
     }

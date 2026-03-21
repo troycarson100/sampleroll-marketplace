@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Manrope, Noto_Serif, Playfair_Display } from "next/font/google";
 import { AudioPlayerProvider } from "@/components/audio/audio-player-context";
-import { SupabaseProvider } from "@/components/providers/supabase-provider";
+import { SessionProvider } from "@/components/providers/session-provider";
 import { SiteTopNav } from "@/components/site-top-nav";
 import "./globals.css";
 
@@ -45,12 +45,12 @@ export default function RootLayout({
       className={`${dmSans.variable} ${playfair.variable} ${stitchSans.variable} ${stitchSerif.variable}`}
     >
       <body className="min-h-screen bg-sr-bg font-sans text-sr-ink">
-        <SupabaseProvider>
+        <SessionProvider>
           <AudioPlayerProvider>
             <SiteTopNav />
             {children}
           </AudioPlayerProvider>
-        </SupabaseProvider>
+        </SessionProvider>
       </body>
     </html>
   );

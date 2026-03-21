@@ -1,11 +1,13 @@
-import { createClient } from "@/lib/supabase/server";
 import { fetchBrowsePageData } from "@/lib/queries/marketplace";
+import { prisma } from "@/lib/db";
 import { BrowseCategoryTabs } from "@/components/marketplace/browse-category-tabs";
 import { BrowseHeroCarousel } from "@/components/marketplace/browse-hero-carousel";
 import { BrowsePackCard } from "@/components/marketplace/browse-pack-card";
 import { BrowsePackGridSection } from "@/components/marketplace/browse-pack-grid-section";
 import { BrowseStickyHeader } from "@/components/marketplace/browse-sticky-header";
 import { GenreRow } from "@/components/marketplace/genre-row";
+import { CatalogUnavailableBanner } from "@/components/marketplace/catalog-unavailable-banner";
+import { DevDatabaseNotice } from "@/components/marketplace/dev-database-notice";
 import { SoundsBrowseShell } from "@/components/marketplace/sounds-browse-shell";
 import { SoundsRightRail } from "@/components/marketplace/sounds-right-rail";
 import Link from "next/link";
@@ -15,8 +17,7 @@ export default async function SoundsPage({
 }: {
   searchParams: { genre?: string };
 }) {
-  const supabase = await createClient();
-  const data = await fetchBrowsePageData(supabase, {
+  const data = await fetchBrowsePageData(prisma, {
     genre: searchParams.genre ?? null,
   });
 
@@ -26,6 +27,8 @@ export default async function SoundsPage({
 
   const center = (
     <>
+      <DevDatabaseNotice />
+      {data.catalogUnavailable ? <CatalogUnavailableBanner /> : null}
       <BrowseStickyHeader />
 
       <div className="px-3 pb-16 pt-3 sm:px-5 sm:pt-4 lg:px-8 lg:pb-20 lg:pt-5">

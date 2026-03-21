@@ -1,60 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+import { signOut, useSession } from "next-auth/react";
 
 export function NavAuth() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-
-    void supabase.auth.getUser().then(({ data: { user: u } }) => {
-      if (!cancelled) {
-        setUser(u ?? null);
-        setReady(true);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  async function signOut() {
-    await createClient().auth.signOut();
-    setUser(null);
+  async function onSignOut() {
+    await signOut({ redirect: false });
     router.refresh();
   }
 
-  if (!ready) {
+  if (status === "loading") {
     return (
-      <span className="h-9 w-20 animate-pulse rounded bg-sr-card" aria-hidden />
+      <span
+        className="h-9 w-20 animate-pulse rounded bg-sr-card"
+        aria-hidden
+      />
     );
   }
 
-  if (user) {
+  if (session?.user) {
     return (
       <div className="flex items-center gap-3 text-sm">
         <span className="hidden max-w-[140px] truncate text-sr-muted sm:inline">
-          {user.email}
+          {session.user.email}
         </span>
         <button
           type="button"
-          onClick={() => void signOut()}
+          onClick={() => void onSignOut()}
           className="rounded-md border border-sr px-3 py-1.5 text-sr-ink transition-colors hover:bg-sr-card"
         >
           Sign out

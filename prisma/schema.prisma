@@ -1,0 +1,106 @@
+// Shared with Sample Dig: `users` table + marketplace tables (NextAuth session user.id = users.id).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                           String    @id @default(cuid())
+  email                        String    @unique
+  passwordHash                 String    @map("password_hash")
+  name                         String?
+  stripeCustomerId             String?   @map("stripe_customer_id")
+  subscriptionStatus           String?   @map("subscription_status")
+  subscriptionCurrentPeriodEnd DateTime? @map("subscription_current_period_end")
+  createdAt                    DateTime  @default(now()) @map("created_at")
+  emailVerified                DateTime? @map("email_verified")
+  emailVerificationToken       String?   @unique @map("email_verification_token")
+  emailVerificationExpires     DateTime? @map("email_verification_expires")
+  passwordResetToken           String?   @unique @map("password_reset_token")
+  passwordResetExpires         DateTime? @map("password_reset_expires")
+
+  profileMarketplace ProfileMarketplace?
+  samplePacks        SamplePack[]        @relation("CreatorPacks")
+  purchases          UserPurchase[]
+
+  @@map("users")
+}
+
+model ProfileMarketplace {
+  id                    String   @id
+  isCreator             Boolean  @default(false) @map("is_creator")
+  creatorDisplayName    String?  @map("creator_display_name")
+  creatorBio            String?  @map("creator_bio")
+  creatorAvatarUrl      String?  @map("creator_avatar_url")
+  customSplitPercentage Int?     @map("custom_split_percentage")
+  paypalEmail           String?  @map("paypal_email")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("profiles_marketplace")
+}
+
+model SamplePack {
+  id            String   @id @default(uuid()) @db.Uuid
+  creatorId     String   @map("creator_id")
+  title         String
+  description   String   @default("")
+  genre         String
+  tags          String[] @default([])
+  coverArtUrl   String?  @map("cover_art_url")
+  priceCents    Int      @default(1499) @map("price_cents")
+  stripePriceId String?  @map("stripe_price_id")
+  sampleCount   Int      @default(0) @map("sample_count")
+  totalSales    Int      @default(0) @map("total_sales")
+  isPublished   Boolean  @default(false) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  creator   User               @relation("CreatorPacks", fields: [creatorId], references: [id], onDelete: Cascade)
+  samples   IndividualSample[]
+  purchases UserPurchase[]
+
+  @@map("sample_packs")
+}
+
+model IndividualSample {
+  id               String   @id @default(uuid()) @db.Uuid
+  packId           String   @map("pack_id") @db.Uuid
+  filename         String
+  originalFilename String   @map("original_filename")
+  fileUrl          String   @map("file_url")
+  previewUrl       String?  @map("preview_url")
+  durationSeconds  Float?   @map("duration_seconds")
+  bpm              Int?
+  musicalKey       String?  @map("musical_key")
+  instrumentTags   String[] @default([]) @map("instrument_tags")
+  genreTags        String[] @default([]) @map("genre_tags")
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  pack SamplePack @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@map("individual_samples")
+}
+
+model UserPurchase {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @map("user_id")
+  packId                String   @map("pack_id") @db.Uuid
+  stripePaymentIntentId String   @map("stripe_payment_intent_id")
+  amountCents           Int      @map("amount_cents")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack SamplePack @relation(fields: [packId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, packId])
+  @@map("user_purchases")
+}

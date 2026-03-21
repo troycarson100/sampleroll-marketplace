@@ -2,6 +2,12 @@
 
 import { useEffect } from "react";
 
+function isProductionOmittedMessage(message: string | undefined): boolean {
+  return Boolean(
+    message?.includes("An error occurred in the Server Components render"),
+  );
+}
+
 export default function Error({
   error,
   reset,
@@ -13,14 +19,46 @@ export default function Error({
     console.error(error);
   }, [error]);
 
+  const genericProd = isProductionOmittedMessage(error.message);
+
   return (
     <div className="mx-auto max-w-lg px-6 py-16 text-sr-ink">
       <h1 className="font-display text-2xl text-sr-gold">
         Something went wrong
       </h1>
-      <p className="mt-3 text-sm text-sr-muted">
-        {error.message || "An unexpected error occurred."}
-      </p>
+      {genericProd ? (
+        <div className="mt-3 space-y-3 text-sm text-sr-muted">
+          <p>
+            The server hit an error while rendering this page. In production,
+            Next.js hides the underlying message.
+          </p>
+          <p>
+            Common causes: missing or invalid{" "}
+            <code className="rounded bg-sr-card px-1 py-0.5">DATABASE_URL</code>
+            , Postgres unreachable from the host, missing{" "}
+            <code className="rounded bg-sr-card px-1 py-0.5">
+              AUTH_SECRET
+            </code>{" "}
+            /{" "}
+            <code className="rounded bg-sr-card px-1 py-0.5">
+              NEXTAUTH_SECRET
+            </code>
+            , or a Prisma schema/database mismatch. Check your hosting logs.
+          </p>
+          {error.digest ? (
+            <p className="text-xs text-sr-dim">
+              Reference digest:{" "}
+              <code className="rounded bg-sr-card px-1 py-0.5">
+                {error.digest}
+              </code>
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-sr-muted">
+          {error.message || "An unexpected error occurred."}
+        </p>
+      )}
       <button
         type="button"
         onClick={() => reset()}

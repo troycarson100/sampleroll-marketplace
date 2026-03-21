@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/db";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sampleFilesObjectPath } from "@/lib/storage-path";
 
@@ -12,41 +13,31 @@ export async function GET(
     return NextResponse.json({ error: "Missing sampleId" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: sample, error: sampleError } = await supabase
-    .from("individual_samples")
-    .select("id, pack_id, file_url")
-    .eq("id", sampleId)
-    .maybeSingle();
+  const sample = await prisma.individualSample.findUnique({
+    where: { id: sampleId },
+    select: { id: true, packId: true, fileUrl: true },
+  });
 
-  if (sampleError) {
-    return NextResponse.json({ error: "Failed to load sample" }, { status: 500 });
-  }
   if (!sample) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { data: purchase } = await supabase
-    .from("user_purchases")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("pack_id", sample.pack_id)
-    .maybeSingle();
+  const purchase = await prisma.userPurchase.findUnique({
+    where: { userId_packId: { userId, packId: sample.packId } },
+    select: { id: true },
+  });
 
   if (!purchase) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const objectPath = sampleFilesObjectPath(sample.file_url);
+  const objectPath = sampleFilesObjectPath(sample.fileUrl);
 
   let service;
   try {
@@ -64,7 +55,10 @@ export async function GET(
 
   if (signError || !signed?.signedUrl) {
     console.error("createSignedUrl:", signError);
-    return NextResponse.json({ error: "Could not create download URL" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not create download URL" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ url: signed.signedUrl });

@@ -1,12 +1,17 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+/**
+ * NextAuth uses JWT cookies. We do not call `updateSupabaseSession` from
+ * `@/lib/supabase/middleware` here — that helper is for Supabase Auth only.
+ * See `docs/SUPABASE_SSR_HELPERS.md`.
+ */
+export function middleware(_request: NextRequest) {
+  void _request;
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

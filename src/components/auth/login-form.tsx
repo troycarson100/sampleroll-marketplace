@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,13 +24,13 @@ export function LoginForm({ nextPath }: Props) {
     setError(null);
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { error: signError } = await supabase.auth.signInWithPassword({
+      const res = await signIn("credentials", {
         email: email.trim(),
         password,
+        redirect: false,
       });
-      if (signError) {
-        setError(signError.message);
+      if (res?.error) {
+        setError("Invalid email or password, or email not verified.");
         return;
       }
       router.push(safeNextPath(nextPath));

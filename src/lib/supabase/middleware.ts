@@ -1,20 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { getSupabasePublishableKey, getSupabaseUrl } from "@/lib/supabase/keys";
 
-export async function updateSession(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (!url || !key) {
-    return NextResponse.next({ request });
-  }
-
+/**
+ * Refreshes Supabase Auth cookies when you use **Supabase** for login.
+ *
+ * This marketplace uses **NextAuth** for accounts — root `src/middleware.ts` does
+ * not call this on purpose. Import `updateSupabaseSession` from there only if you
+ * migrate auth to Supabase or run both stacks and accept cookie interaction risk.
+ */
+export async function updateSupabaseSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
-    request,
+    request: {
+      headers: request.headers,
+    },
   });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabasePublishableKey(),
     {
       cookies: {
         getAll() {

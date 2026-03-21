@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+
+type CheckUser = { id: string; email: string | null } | null;
 
 export function usePurchaseStatus(packId: string | undefined) {
   const [owned, setOwned] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<CheckUser>(null);
 
   useEffect(() => {
     if (!packId) {
@@ -17,35 +17,29 @@ export function usePurchaseStatus(packId: string | undefined) {
       return;
     }
 
-    const supabase = createClient();
     let cancelled = false;
 
     void (async () => {
-      const {
-        data: { user: current },
-      } = await supabase.auth.getUser();
-
-      if (!current) {
+      try {
+        const res = await fetch(
+          `/api/purchases/check?packId=${encodeURIComponent(packId)}`,
+          { credentials: "include" },
+        );
+        const data = (await res.json()) as {
+          owned?: boolean;
+          user?: { id: string; email: string | null } | null;
+        };
         if (!cancelled) {
-          setUser(null);
-          setOwned(false);
-          setLoading(false);
+          setOwned(Boolean(data.owned));
+          setUser(data.user ?? null);
         }
-        return;
-      }
-
-      if (!cancelled) setUser(current);
-
-      const { data } = await supabase
-        .from("user_purchases")
-        .select("id")
-        .eq("user_id", current.id)
-        .eq("pack_id", packId)
-        .maybeSingle();
-
-      if (!cancelled) {
-        setOwned(!!data);
-        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setOwned(false);
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
