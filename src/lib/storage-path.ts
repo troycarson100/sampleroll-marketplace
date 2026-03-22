@@ -18,3 +18,23 @@ export function sampleFilesObjectPath(fileUrl: string): string {
   }
   return trimmed.replace(/^\/+/, "");
 }
+
+/**
+ * Normalize a stored `preview_url` (public URL) to the object path in `sample-previews`.
+ */
+export function samplePreviewsObjectPath(previewUrl: string): string {
+  const trimmed = previewUrl.trim();
+  const needles = [
+    "/storage/v1/object/public/sample-previews/",
+    "/storage/v1/object/sign/sample-previews/",
+    "/storage/v1/object/sample-previews/",
+    "/sample-previews/",
+  ];
+  for (const n of needles) {
+    const i = trimmed.indexOf(n);
+    if (i >= 0) {
+      return decodeURIComponent(trimmed.slice(i + n.length).split("?")[0] ?? "");
+    }
+  }
+  return trimmed.replace(/^\/+/, "");
+}

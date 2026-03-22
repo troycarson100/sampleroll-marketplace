@@ -27,20 +27,74 @@ model User {
   profileMarketplace ProfileMarketplace?
   samplePacks        SamplePack[]        @relation("CreatorPacks")
   purchases          UserPurchase[]
+  creatorEarnings    CreatorEarning[]
+  platformStaff      PlatformStaff?
+  contractsAsCreator CreatorContract[]   @relation("ContractCreator")
+  contractsCreated   CreatorContract[]   @relation("ContractCreatedBy")
 
   @@map("users")
 }
 
+model PlatformStaff {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("platform_staff")
+}
+
+enum CreatorContractStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  DECLINED
+  VOID
+
+  @@map("creator_contract_status")
+}
+
+model CreatorContract {
+  id                  String                @id @default(uuid()) @db.Uuid
+  creatorUserId       String                @map("creator_user_id")
+  inviteEmailNorm     String                @map("invite_email_norm")
+  splitPercentage     Int                   @map("split_percentage")
+  title               String                @default("Revenue share agreement")
+  notes               String                @default("")
+  legalObjectPath     String?               @map("legal_object_path")
+  legalFilename       String?               @map("legal_filename")
+  status              CreatorContractStatus @default(DRAFT)
+  acceptanceToken     String                @unique @map("acceptance_token")
+  createdByUserId     String                @map("created_by_user_id")
+  sentAt              DateTime?             @map("sent_at")
+  acceptedAt          DateTime?             @map("accepted_at")
+  declinedAt          DateTime?             @map("declined_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  creator   User @relation("ContractCreator", fields: [creatorUserId], references: [id], onDelete: Cascade)
+  createdBy User @relation("ContractCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([creatorUserId])
+  @@index([inviteEmailNorm])
+  @@map("creator_contracts")
+}
+
 model ProfileMarketplace {
-  id                    String   @id
-  isCreator             Boolean  @default(false) @map("is_creator")
-  creatorDisplayName    String?  @map("creator_display_name")
-  creatorBio            String?  @map("creator_bio")
-  creatorAvatarUrl      String?  @map("creator_avatar_url")
-  customSplitPercentage Int?     @map("custom_split_percentage")
-  paypalEmail           String?  @map("paypal_email")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                              String   @id
+  isCreator                       Boolean  @default(false) @map("is_creator")
+  creatorDisplayName              String?  @map("creator_display_name")
+  creatorBio                      String?  @map("creator_bio")
+  creatorAvatarUrl                String?  @map("creator_avatar_url")
+  customSplitPercentage           Int?     @map("custom_split_percentage")
+  paypalEmail                     String?  @map("paypal_email")
+  stripeConnectAccountId          String?  @map("stripe_connect_account_id")
+  stripeConnectChargesEnabled     Boolean  @default(false) @map("stripe_connect_charges_enabled")
+  stripeConnectPayoutsEnabled     Boolean  @default(false) @map("stripe_connect_payouts_enabled")
+  stripeConnectDetailsSubmitted   Boolean  @default(false) @map("stripe_connect_details_submitted")
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [id], references: [id], onDelete: Cascade)
 
@@ -63,9 +117,10 @@ model SamplePack {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  creator   User               @relation("CreatorPacks", fields: [creatorId], references: [id], onDelete: Cascade)
-  samples   IndividualSample[]
-  purchases UserPurchase[]
+  creator         User               @relation("CreatorPacks", fields: [creatorId], references: [id], onDelete: Cascade)
+  samples         IndividualSample[]
+  purchases       UserPurchase[]
+  creatorEarnings CreatorEarning[]
 
   @@map("sample_packs")
 }
@@ -98,9 +153,30 @@ model UserPurchase {
   amountCents           Int      @map("amount_cents")
   createdAt             DateTime @default(now()) @map("created_at")
 
-  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pack SamplePack @relation(fields: [packId], references: [id], onDelete: Restrict)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack     SamplePack       @relation(fields: [packId], references: [id], onDelete: Restrict)
+  earnings CreatorEarning[]
 
   @@unique([userId, packId])
   @@map("user_purchases")
+}
+
+model CreatorEarning {
+  id                  String    @id @default(uuid()) @db.Uuid
+  creatorId           String    @map("creator_id")
+  packId              String    @map("pack_id") @db.Uuid
+  purchaseId          String    @map("purchase_id") @db.Uuid
+  saleAmountCents     Int       @map("sale_amount_cents")
+  creatorShareCents   Int       @map("creator_share_cents")
+  platformShareCents  Int       @map("platform_share_cents")
+  splitPercentage     Int       @map("split_percentage")
+  isPaidOut           Boolean   @default(false) @map("is_paid_out")
+  paidOutAt           DateTime? @map("paid_out_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  creator  User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  pack     SamplePack   @relation(fields: [packId], references: [id], onDelete: Restrict)
+  purchase UserPurchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@map("creator_earnings")
 }

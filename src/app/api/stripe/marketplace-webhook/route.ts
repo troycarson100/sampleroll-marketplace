@@ -1,46 +1,15 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
-import { DEFAULT_CREATOR_SPLIT } from "@/lib/constants";
+import { prisma } from "@/lib/db";
+import { resolveCreatorSplitPercent } from "@/lib/stripe-pack-split";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
-  if (!stripe) {
-    return NextResponse.json(
-      { error: "Stripe is not configured" },
-      { status: 500 },
-    );
-  }
-
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  if (!webhookSecret) {
-    return NextResponse.json(
-      { error: "STRIPE_WEBHOOK_SECRET is not set" },
-      { status: 500 },
-    );
-  }
-
-  const signature = request.headers.get("stripe-signature");
-  if (!signature) {
-    return NextResponse.json({ error: "Missing stripe-signature" }, { status: 400 });
-  }
-
-  const rawBody = await request.text();
-
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Invalid signature";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-
-  if (event.type !== "checkout.session.completed") {
-    return NextResponse.json({ received: true }, { status: 200 });
-  }
-
+async function handleCheckoutSessionCompleted(
+  event: Stripe.Event,
+): Promise<NextResponse> {
   const session = event.data.object as Stripe.Checkout.Session;
   const userId = session.metadata?.userId;
   const packId = session.metadata?.packId;
@@ -124,10 +93,9 @@ export async function POST(request: Request) {
     .eq("id", creatorId)
     .maybeSingle();
 
-  const split =
-    profile?.custom_split_percentage != null
-      ? Math.min(100, Math.max(0, profile.custom_split_percentage))
-      : DEFAULT_CREATOR_SPLIT;
+  const split = resolveCreatorSplitPercent(
+    profile?.custom_split_percentage ?? undefined,
+  );
 
   const creatorShareCents = Math.round((amountCents * split) / 100);
   const platformShareCents = amountCents - creatorShareCents;
@@ -166,4 +134,84 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ received: true }, { status: 200 });
+}
+
+async function handleAccountUpdated(event: Stripe.Event): Promise<NextResponse> {
+  const account = event.data.object as Stripe.Account;
+  const userId = account.metadata?.marketplace_user_id;
+
+  const data = {
+    stripeConnectAccountId: account.id,
+    stripeConnectChargesEnabled: account.charges_enabled ?? false,
+    stripeConnectPayoutsEnabled: account.payouts_enabled ?? false,
+    stripeConnectDetailsSubmitted: account.details_submitted ?? false,
+  };
+
+  try {
+    const conditions: Array<
+      { id: string } | { stripeConnectAccountId: string }
+    > = [{ stripeConnectAccountId: account.id }];
+    if (userId) {
+      conditions.push({ id: userId });
+    }
+
+    const result = await prisma.profileMarketplace.updateMany({
+      where: { OR: conditions },
+      data,
+    });
+
+    if (result.count === 0) {
+      console.warn(
+        "account.updated: no profiles_marketplace row matched",
+        account.id,
+        userId,
+      );
+    }
+  } catch (e) {
+    console.error("profile Connect sync:", e);
+    return NextResponse.json({ error: "Profile update failed" }, { status: 500 });
+  }
+
+  return NextResponse.json({ received: true }, { status: 200 });
+}
+
+export async function POST(request: Request) {
+  if (!stripe) {
+    return NextResponse.json(
+      { error: "Stripe is not configured" },
+      { status: 500 },
+    );
+  }
+
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  if (!webhookSecret) {
+    return NextResponse.json(
+      { error: "STRIPE_WEBHOOK_SECRET is not set" },
+      { status: 500 },
+    );
+  }
+
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing stripe-signature" }, { status: 400 });
+  }
+
+  const rawBody = await request.text();
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Invalid signature";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  switch (event.type) {
+    case "checkout.session.completed":
+      return handleCheckoutSessionCompleted(event);
+    case "account.updated":
+      return handleAccountUpdated(event);
+    default:
+      return NextResponse.json({ received: true }, { status: 200 });
+  }
 }

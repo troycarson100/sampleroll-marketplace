@@ -11,10 +11,15 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:ping": "printf 'SELECT 1;\\n' | dotenv -e .env.local -- npx prisma db execute --stdin",
+    "db:run-sql": "node scripts/run-sql-file.mjs",
     "db:probe-pooler": "node scripts/supabase-pooler-probe.mjs",
-    "db:pooler-host": "node scripts/print-supabase-pooler-host.mjs"
+    "db:pooler-host": "node scripts/print-supabase-pooler-host.mjs",
+    "stripe:listen": "stripe listen --forward-to localhost:3001/api/stripe/marketplace-webhook"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "5.22.0",
     "@stripe/stripe-js": "^8.11.0",
     "@supabase/ssr": "^0.9.0",
