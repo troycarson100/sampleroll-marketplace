@@ -20,6 +20,10 @@ import {
   downloadSampleFilesSequentially,
 } from "@/lib/client/download-sample-file";
 import { PackSamplesListHeader } from "@/components/marketplace/pack-samples-list-header";
+import {
+  type PackSamplesSortKey,
+  sortSamplesList,
+} from "@/components/marketplace/pack-samples-list-sort";
 import { SampleWaveformStrip } from "@/components/marketplace/sample-waveform-strip";
 import type { IndividualSample } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -41,8 +45,6 @@ type Props = {
   packMeta: PackSamplesMeta;
   demoPreviewUrl?: string | null;
 };
-
-type SortKey = "az" | "newest" | "bpmAsc" | "bpmDesc";
 
 /** Static total length only (e.g. `20s`) — no live playback clock. */
 function formatStaticDuration(sec: number | null) {
@@ -94,19 +96,6 @@ function collectTags(samples: IndividualSample[]) {
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
-function cmpBpm(
-  a: IndividualSample,
-  b: IndividualSample,
-  dir: "asc" | "desc",
-) {
-  const ab = a.bpm;
-  const bb = b.bpm;
-  if (ab == null && bb == null) return 0;
-  if (ab == null) return 1;
-  if (bb == null) return -1;
-  return dir === "asc" ? ab - bb : bb - ab;
-}
-
 function RowThumb({ url }: { url: string | null }) {
   if (url) {
     return (
@@ -140,7 +129,7 @@ export function PackSamplesList({
     duration: playerDuration,
     setQueue,
   } = useAudioPlayer();
-  const [sortKey, setSortKey] = useState<SortKey>("az");
+  const [sortKey, setSortKey] = useState<PackSamplesSortKey>("az");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [bulkDownloading, setBulkDownloading] = useState(false);
   /** Filled when metadata loads in the player (many rows have null duration in DB). */
@@ -194,33 +183,56 @@ export function PackSamplesList({
         );
       });
     }
+    return sortSamplesList(list, sortKey, {
+      /** Match Time column: DB length, probed metadata, then live player for current row. */
+      resolveDurationSeconds: (s) =>
+        resolveDurationSeconds(
+          s.duration_seconds,
+          currentSample?.id === s.id,
+          playerDuration,
+          heardDurationBySampleId[s.id],
+        ),
+    });
+  }, [
+    samples,
+    activeTags,
+    sortKey,
+    heardDurationBySampleId,
+    currentSample?.id,
+    playerDuration,
+  ]);
 
-    switch (sortKey) {
-      case "az":
-        list.sort((a, b) =>
-          a.filename.localeCompare(b.filename, undefined, {
-            sensitivity: "base",
-          }),
-        );
-        break;
-      case "newest":
-        list.sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime(),
-        );
-        break;
-      case "bpmAsc":
-        list.sort((a, b) => cmpBpm(a, b, "asc"));
-        break;
-      case "bpmDesc":
-        list.sort((a, b) => cmpBpm(a, b, "desc"));
-        break;
-      default:
-        break;
-    }
-    return list;
-  }, [samples, activeTags, sortKey]);
+  const sortByFilename = useCallback(() => {
+    setSortKey((k) => {
+      if (k === "az") return "filenameDesc";
+      if (k === "filenameDesc") return "az";
+      return "az";
+    });
+  }, []);
+
+  const sortByTime = useCallback(() => {
+    setSortKey((k) => {
+      if (k === "durationAsc") return "durationDesc";
+      if (k === "durationDesc") return "durationAsc";
+      return "durationAsc";
+    });
+  }, []);
+
+  const sortByKey = useCallback(() => {
+    setSortKey((k) => {
+      if (k === "keyAsc") return "keyDesc";
+      if (k === "keyDesc") return "keyAsc";
+      return "keyAsc";
+    });
+  }, []);
+
+  const sortByBpm = useCallback(() => {
+    setSortKey((k) => {
+      if (k === "bpmAsc") return "bpmDesc";
+      if (k === "bpmDesc") return "bpmAsc";
+      return "bpmAsc";
+    });
+  }, []);
 
   /** Load duration from preview URL when DB has no length (common for older uploads). */
   const metadataProbeDoneRef = useRef<Set<string>>(new Set());
@@ -443,10 +455,17 @@ export function PackSamplesList({
           <select
             className="min-w-[10rem] rounded-lg bg-sr-card/90 py-2 pl-3 pr-8 text-sm text-sr-ink ring-1 ring-white/[0.1] transition-shadow focus:outline-none focus:ring-2 focus:ring-sr-gold/40"
             value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            onChange={(e) =>
+              setSortKey(e.target.value as PackSamplesSortKey)
+            }
           >
             <option value="az">A–Z</option>
+            <option value="filenameDesc">Z–A</option>
             <option value="newest">Newest</option>
+            <option value="durationAsc">Time (short → long)</option>
+            <option value="durationDesc">Time (long → short)</option>
+            <option value="keyAsc">Key (A–Z)</option>
+            <option value="keyDesc">Key (Z–A)</option>
             <option value="bpmAsc">BPM low → high</option>
             <option value="bpmDesc">BPM high → low</option>
           </select>
@@ -478,7 +497,13 @@ export function PackSamplesList({
 
       {filteredSorted.length > 0 ? (
         <div className="mt-8">
-          <PackSamplesListHeader />
+          <PackSamplesListHeader
+            sortKey={sortKey}
+            onSortFilename={sortByFilename}
+            onSortTime={sortByTime}
+            onSortKey={sortByKey}
+            onSortBpm={sortByBpm}
+          />
           <ul className="mt-1.5 flex flex-col gap-1.5">
         {filteredSorted.map((s) => {
           const canPreview = !!s.preview_url;

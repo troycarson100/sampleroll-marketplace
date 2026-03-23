@@ -1,24 +1,75 @@
 "use client";
 
-import { ArrowUpDown, Download } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download } from "lucide-react";
+import type { PackSamplesSortKey } from "@/components/marketplace/pack-samples-list-sort";
 import { cn } from "@/lib/utils";
 
-/** Decorative sort hint (global sort lives in the toolbar). */
-function SortHint() {
+function SortGlyph({
+  active,
+  direction,
+}: {
+  active: boolean;
+  direction: "asc" | "desc" | null;
+}) {
+  if (!active || direction == null) {
+    return (
+      <ArrowUpDown
+        className="ml-0.5 inline h-3 w-3 shrink-0 opacity-45"
+        strokeWidth={2}
+        aria-hidden
+      />
+    );
+  }
+  const Icon = direction === "asc" ? ArrowUp : ArrowDown;
   return (
-    <ArrowUpDown
-      className="ml-0.5 inline h-3 w-3 shrink-0 opacity-45"
+    <Icon
+      className="ml-0.5 inline h-3 w-3 shrink-0 text-sr-gold/90"
       strokeWidth={2}
       aria-hidden
     />
   );
 }
 
+type Props = {
+  sortKey: PackSamplesSortKey;
+  onSortFilename: () => void;
+  onSortTime: () => void;
+  onSortKey: () => void;
+  onSortBpm: () => void;
+  className?: string;
+};
+
 /**
- * Column titles aligned with `PackSamplesList` rows (Splice-style).
- * Widths must stay in sync with row cells + `SampleWaveformStrip`.
+ * Column titles aligned with `PackSamplesList` rows; sortable headers toggle sort.
  */
-export function PackSamplesListHeader({ className }: { className?: string }) {
+export function PackSamplesListHeader({
+  sortKey,
+  onSortFilename,
+  onSortTime,
+  onSortKey,
+  onSortBpm,
+  className,
+}: Props) {
+  const filenameActive = sortKey === "az" || sortKey === "filenameDesc";
+  const filenameDir: "asc" | "desc" | null =
+    sortKey === "az" ? "asc" : sortKey === "filenameDesc" ? "desc" : null;
+
+  const timeActive = sortKey === "durationAsc" || sortKey === "durationDesc";
+  const timeDir: "asc" | "desc" | null =
+    sortKey === "durationAsc"
+      ? "asc"
+      : sortKey === "durationDesc"
+        ? "desc"
+        : null;
+
+  const keyActive = sortKey === "keyAsc" || sortKey === "keyDesc";
+  const keyDir: "asc" | "desc" | null =
+    sortKey === "keyAsc" ? "asc" : sortKey === "keyDesc" ? "desc" : null;
+
+  const bpmActive = sortKey === "bpmAsc" || sortKey === "bpmDesc";
+  const bpmDir: "asc" | "desc" | null =
+    sortKey === "bpmAsc" ? "asc" : sortKey === "bpmDesc" ? "desc" : null;
+
   return (
     <div
       role="row"
@@ -32,31 +83,47 @@ export function PackSamplesListHeader({ className }: { className?: string }) {
       </div>
       <div className="h-6 w-6 shrink-0" aria-hidden />
       <div className="flex min-w-0 flex-1 basis-0 items-end overflow-hidden pb-0.5">
-        <span className="truncate">
+        <button
+          type="button"
+          onClick={onSortFilename}
+          className="inline-flex max-w-full items-center truncate text-left text-sr-dim transition-colors hover:text-sr-ink"
+        >
           Filename
-          <SortHint />
-        </span>
+          <SortGlyph active={filenameActive} direction={filenameDir} />
+        </button>
       </div>
       <div className="flex w-24 shrink-0 items-end justify-center sm:w-32 md:w-40 lg:w-44">
         <span className="truncate">Waveform</span>
       </div>
       <div className="flex w-[3.5rem] shrink-0 items-end justify-end">
-        <span>
+        <button
+          type="button"
+          onClick={onSortTime}
+          className="inline-flex items-center whitespace-nowrap text-sr-dim transition-colors hover:text-sr-ink"
+        >
           Time
-          <SortHint />
-        </span>
+          <SortGlyph active={timeActive} direction={timeDir} />
+        </button>
       </div>
       <div className="hidden w-11 shrink-0 items-end justify-center sm:flex md:w-14">
-        <span>
+        <button
+          type="button"
+          onClick={onSortKey}
+          className="inline-flex items-center whitespace-nowrap text-sr-dim transition-colors hover:text-sr-ink"
+        >
           Key
-          <SortHint />
-        </span>
+          <SortGlyph active={keyActive} direction={keyDir} />
+        </button>
       </div>
-      <div className="hidden w-9 shrink-0 items-end justify-center md:flex">
-        <span className="text-center">
+      <div className="hidden w-9 shrink-0 items-end justify-end md:flex">
+        <button
+          type="button"
+          onClick={onSortBpm}
+          className="inline-flex items-center whitespace-nowrap text-sr-dim transition-colors hover:text-sr-ink"
+        >
           BPM
-          <SortHint />
-        </span>
+          <SortGlyph active={bpmActive} direction={bpmDir} />
+        </button>
       </div>
       <div
         className="flex w-8 shrink-0 items-end justify-center pb-0.5 text-sr-dim"
