@@ -16,6 +16,7 @@ type PatchBody = {
   priceCents?: number;
   isPublished?: boolean;
   coverArtUrl?: string | null;
+  demoPreviewUrl?: string | null;
 };
 
 const genreSet = new Set<string>(CREATOR_PACK_GENRES);
@@ -118,6 +119,13 @@ export async function PATCH(
     data.coverArtUrl = body.coverArtUrl;
   }
 
+  if (body.demoPreviewUrl !== undefined) {
+    if (body.demoPreviewUrl !== null && typeof body.demoPreviewUrl !== "string") {
+      return NextResponse.json({ error: "Invalid demoPreviewUrl" }, { status: 400 });
+    }
+    data.demoPreviewUrl = body.demoPreviewUrl;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });
   }
@@ -136,6 +144,7 @@ export async function PATCH(
       tags: updated.tags,
       priceCents: updated.priceCents,
       coverArtUrl: updated.coverArtUrl,
+      demoPreviewUrl: updated.demoPreviewUrl,
       isPublished: updated.isPublished,
       sampleCount: updated.sampleCount,
       stripePriceId: updated.stripePriceId,

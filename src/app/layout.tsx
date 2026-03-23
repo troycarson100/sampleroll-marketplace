@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { DM_Sans, Manrope, Noto_Serif, Playfair_Display } from "next/font/google";
 import { AudioPlayerProvider } from "@/components/audio/audio-player-context";
+import { AudioPlayerShortcuts } from "@/components/audio/audio-player-shortcuts";
+import { BottomPlayerBar } from "@/components/marketplace/bottom-player-bar";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { SiteTopNav } from "@/components/site-top-nav";
 import "./globals.css";
@@ -47,8 +49,10 @@ export default function RootLayout({
       <body className="min-h-screen bg-sr-bg font-sans text-sr-ink">
         <SessionProvider>
           <AudioPlayerProvider>
+            <AudioPlayerShortcuts />
             <SiteTopNav />
             {children}
+            <BottomPlayerBar />
           </AudioPlayerProvider>
         </SessionProvider>
       </body>

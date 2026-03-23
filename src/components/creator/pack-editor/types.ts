@@ -6,6 +6,8 @@ export type PackEditorPack = {
   tags: string[];
   priceCents: number;
   coverArtUrl: string | null;
+  /** Public URL for pack-wide demo (uploaded separately from samples) */
+  demoPreviewUrl: string | null;
   isPublished: boolean;
   sampleCount: number;
   stripePriceId: string | null;

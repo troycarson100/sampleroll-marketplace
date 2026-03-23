@@ -75,7 +75,15 @@ export default async function PackDetailPage({
       <PackSamplesList
         samples={detail.samples}
         ownsPack={detail.ownsPack}
+        ownedSampleIds={detail.ownedSampleIds}
         packCoverUrl={detail.pack.cover_art_url}
+        demoPreviewUrl={detail.pack.demo_preview_url}
+        packMeta={{
+          id: detail.pack.id,
+          title: detail.pack.title,
+          genre: detail.pack.genre,
+          tags: detail.pack.tags,
+        }}
       />
     </main>
   );

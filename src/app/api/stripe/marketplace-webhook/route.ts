@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { resolveCreatorSplitPercent } from "@/lib/stripe-pack-split";
+import { stripeConnectFieldsFromAccount } from "@/lib/stripe-connect-profile-fields";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -140,12 +141,7 @@ async function handleAccountUpdated(event: Stripe.Event): Promise<NextResponse> 
   const account = event.data.object as Stripe.Account;
   const userId = account.metadata?.marketplace_user_id;
 
-  const data = {
-    stripeConnectAccountId: account.id,
-    stripeConnectChargesEnabled: account.charges_enabled ?? false,
-    stripeConnectPayoutsEnabled: account.payouts_enabled ?? false,
-    stripeConnectDetailsSubmitted: account.details_submitted ?? false,
-  };
+  const data = stripeConnectFieldsFromAccount(account);
 
   try {
     const conditions: Array<

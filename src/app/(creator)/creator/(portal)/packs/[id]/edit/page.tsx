@@ -39,6 +39,7 @@ export default async function EditPackPage({
     tags: pack.tags,
     priceCents: pack.priceCents,
     coverArtUrl: pack.coverArtUrl,
+    demoPreviewUrl: pack.demoPreviewUrl,
     isPublished: pack.isPublished,
     sampleCount: pack.sampleCount,
     stripePriceId: pack.stripePriceId,

@@ -192,6 +192,8 @@ export type PackDetailData = {
   creatorDisplayName: string;
   samples: IndividualSample[];
   ownsPack: boolean;
+  /** Subset purchase: IDs the user may download without owning the full pack (future). */
+  ownedSampleIds?: string[];
 };
 
 export type PackDetailFetchResult =
@@ -225,6 +227,7 @@ export async function fetchPackDetailPageData(
       genre: row.genre,
       tags: row.tags,
       cover_art_url: row.coverArtUrl,
+      demo_preview_url: row.demoPreviewUrl,
       price_cents: row.priceCents,
       stripe_price_id: row.stripePriceId,
       sample_count: row.sampleCount,

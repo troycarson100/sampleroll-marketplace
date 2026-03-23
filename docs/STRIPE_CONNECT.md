@@ -8,6 +8,15 @@ Creators onboard with **Stripe Connect Express**. Your platform charges buyers w
 2. Choose **Express** accounts (typical for marketplaces).
 3. Complete Connect branding / support settings if prompted.
 
+### Platform profile (required for Express onboarding)
+
+Stripe will block or interrupt **connected account** onboarding until the **platform** (the Stripe account that owns your `STRIPE_SECRET_KEY`) completes the Connect **platform profile**, including disclosures about **losses / liability** for connected accounts.
+
+- Open **[Connect → Platform profile](https://dashboard.stripe.com/settings/connect/platform-profile)** while logged into that **same** Stripe account.
+- Finish every required section, then have the creator click **Continue with Stripe** again from `/creator/dashboard` if they were stuck.
+
+If onboarding finished in Stripe but the app still shows “Finish Stripe payout setup”, the `account.updated` webhook may not have fired (common in **local** dev). On the creator dashboard use **Refresh status** or rely on production webhooks (see §3).
+
 ## 2. Environment variables
 
 Already used:
@@ -34,7 +43,7 @@ In **Developers → Webhooks → [your endpoint]** add **`account.updated`** and
 ## 4. App behavior
 
 - **Onboarding** (`/creator/onboard`): saves profile, then opens a Stripe **Account Link** so the creator completes Express onboarding.
-- **Dashboard**: shows a banner until `charges_enabled` is synced (via webhook).
+- **Dashboard**: shows a banner until `charges_enabled` is synced (via webhook or **Refresh status** / return-url sync calling `POST /api/creator/stripe-connect/sync-status`).
 - **Database**: migration adds `stripe_connect_*` columns on `profiles_marketplace` (see `supabase/migrations/`).
 
 Apply the SQL migration (or `prisma db push` in dev) so Prisma and the DB match.

@@ -37,6 +37,22 @@ Supabase’s **direct** connection uses host `db.[PROJECT-REF].supabase.co:5432`
 5. **Restart** `npm run dev` after any change to `.env.local`.
 6. Run the marketplace **SQL migrations** in `supabase/migrations/` (in order) in the **SQL Editor** so `sample_packs` and related tables exist. Connection can succeed but the catalog still fails if tables are missing.
 
+**Creator onboarding: “Could not save profile”** — Usually Prisma is connected, but **`profiles_marketplace` is missing columns** Prisma expects (e.g. Stripe Connect fields). Apply at least:
+
+`20260321140000_marketplace_nextauth_user_ids.sql` → `20260322120000_stripe_connect_profiles.sql`
+
+From the project root (uses `.env.local`):
+
+```bash
+npm run db:run-sql -- supabase/migrations/20260322120000_stripe_connect_profiles.sql
+```
+
+In **development**, the API error text often includes the underlying Postgres/Prisma message so you can see “column … does not exist”.
+
+**Pack pages / Prisma errors on `demo_preview_url`:** Apply  
+`supabase/migrations/20260323120000_pack_demo_preview.sql`  
+(`npm run db:run-sql -- supabase/migrations/20260323120000_pack_demo_preview.sql`) then `npx prisma generate`.
+
 **Sanity check (uses `.env.local`):**
 
 ```bash

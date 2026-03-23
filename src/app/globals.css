@@ -6,6 +6,11 @@
   html {
     @apply bg-sr-bg text-sr-ink antialiased;
   }
+
+  /* Space for fixed bottom audio bar (--sr-player-pad set by BottomPlayerBar on <html>) */
+  body {
+    padding-bottom: var(--sr-player-pad, 0px);
+  }
 }
 
 @layer utilities {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
@@ -6,11 +7,21 @@ import {
   platformApplicationFeeCents,
   resolveCreatorSplitPercent,
 } from "@/lib/stripe-pack-split";
+import {
+  isTestModeAllowed,
+  isTestModeCookieOn,
+  TEST_MODE_COOKIE,
+} from "@/lib/test-mode";
 
 type Body = { packId?: string };
 
 export async function POST(request: Request) {
-  if (!stripe) {
+  const stripeClient = stripe;
+  const testModeEnabled =
+    isTestModeAllowed() &&
+    isTestModeCookieOn(cookies().get(TEST_MODE_COOKIE)?.value);
+
+  if (!stripeClient && !testModeEnabled) {
     return NextResponse.json(
       { error: "Stripe is not configured" },
       { status: 500 },
@@ -63,6 +74,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "http://localhost:3001";
+  const base = appUrl.replace(/\/$/, "");
+
   const creatorProfile = await prisma.profileMarketplace.findUnique({
     where: { id: pack.creatorId },
     select: {
@@ -72,9 +87,57 @@ export async function POST(request: Request) {
     },
   });
 
+  if (testModeEnabled) {
+    const splitPercent = resolveCreatorSplitPercent(
+      creatorProfile?.customSplitPercentage,
+    );
+    const creatorShareCents = Math.round((pack.priceCents * splitPercent) / 100);
+    const platformShareCents = pack.priceCents - creatorShareCents;
+
+    await prisma.$transaction(async (tx) => {
+      const purchase = await tx.userPurchase.create({
+        data: {
+          userId,
+          packId: pack.id,
+          stripePaymentIntentId: `testmode_${Date.now()}_${pack.id}`,
+          amountCents: pack.priceCents,
+        },
+      });
+
+      await tx.creatorEarning.create({
+        data: {
+          creatorId: pack.creatorId,
+          packId: pack.id,
+          purchaseId: purchase.id,
+          saleAmountCents: pack.priceCents,
+          creatorShareCents,
+          platformShareCents,
+          splitPercentage: splitPercent,
+        },
+      });
+
+      await tx.samplePack.update({
+        where: { id: pack.id },
+        data: { totalSales: { increment: 1 } },
+      });
+    });
+
+    return NextResponse.json({
+      url: `${base}/sounds/packs/${packId}?purchased=true&test_mode=1`,
+      testMode: true,
+    });
+  }
+
+  if (!stripeClient) {
+    return NextResponse.json(
+      { error: "Stripe is not configured" },
+      { status: 500 },
+    );
+  }
+
   let grossCents = pack.priceCents;
   if (pack.stripePriceId) {
-    const price = await stripe.prices.retrieve(pack.stripePriceId);
+    const price = await stripeClient.prices.retrieve(pack.stripePriceId);
     if (price.unit_amount != null) {
       grossCents = price.unit_amount;
     }
@@ -93,10 +156,6 @@ export async function POST(request: Request) {
     Boolean(creatorProfile?.stripeConnectChargesEnabled) &&
     applicationFeeCents >= 0 &&
     applicationFeeCents < grossCents;
-
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "http://localhost:3001";
-  const base = appUrl.replace(/\/$/, "");
 
   const lineItems = pack.stripePriceId
     ? [{ price: pack.stripePriceId, quantity: 1 }]
@@ -129,7 +188,7 @@ export async function POST(request: Request) {
         }
       : undefined;
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutSession = await stripeClient.checkout.sessions.create({
     mode: "payment",
     line_items: lineItems,
     ...(paymentIntentData

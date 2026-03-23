@@ -109,6 +109,8 @@ model SamplePack {
   genre         String
   tags          String[] @default([])
   coverArtUrl   String?  @map("cover_art_url")
+  // Pack-wide demo audio URL (separate from per-sample previews)
+  demoPreviewUrl String? @map("demo_preview_url")
   priceCents    Int      @default(1499) @map("price_cents")
   stripePriceId String?  @map("stripe_price_id")
   sampleCount   Int      @default(0) @map("sample_count")

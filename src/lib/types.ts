@@ -20,6 +20,8 @@ export interface SamplePack {
   genre: string;
   tags: string[];
   cover_art_url: string | null;
+  /** Public URL for pack-wide demo audio (separate from per-sample previews) */
+  demo_preview_url: string | null;
   price_cents: number;
   stripe_price_id: string | null;
   sample_count: number;

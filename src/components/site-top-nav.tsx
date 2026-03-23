@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NavAuth } from "@/components/auth/nav-auth";
+import { TestModeToggle } from "@/components/test-mode-toggle";
 
 const links = [
   { href: "/sounds", label: "Sounds" },
@@ -29,7 +30,10 @@ export function SiteTopNav() {
             </Link>
           ))}
         </nav>
-        <NavAuth />
+        <div className="flex items-center gap-2">
+          <TestModeToggle />
+          <NavAuth />
+        </div>
       </div>
     </header>
   );

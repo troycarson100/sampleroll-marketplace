@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { PublishBar } from "./publish-bar";
+import { PackDemoSection } from "./pack-demo-section";
 import { PackDetailsForm } from "./pack-details-form";
 import { SamplesSection } from "./samples-section";
 import type { PackEditorPack, PackEditorSample } from "./types";
@@ -25,6 +26,7 @@ export function PackEditor({ initialPack, initialSamples }: Props) {
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
         <h1 className="font-display text-3xl text-sr-ink">Edit pack</h1>
         <PackDetailsForm pack={pack} onPackUpdate={mergePack} />
+        <PackDemoSection pack={pack} onPackUpdate={mergePack} />
         <SamplesSection
           packId={pack.id}
           samples={samples}

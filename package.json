@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "dev:clean": "rm -rf .next node_modules/.cache && next dev -p 3001",
+    "clean:dev": "rm -rf .next node_modules/.cache",
+    "dev:clean": "npm run clean:dev && next dev -p 3001",
     "dev:3001": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
@@ -14,7 +15,8 @@
     "db:run-sql": "node scripts/run-sql-file.mjs",
     "db:probe-pooler": "node scripts/supabase-pooler-probe.mjs",
     "db:pooler-host": "node scripts/print-supabase-pooler-host.mjs",
-    "stripe:listen": "stripe listen --forward-to localhost:3001/api/stripe/marketplace-webhook"
+    "stripe:listen": "stripe listen --forward-to localhost:3001/api/stripe/marketplace-webhook",
+    "seed:mock-packs": "node scripts/seed-mock-packs.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

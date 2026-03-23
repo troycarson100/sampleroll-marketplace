@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/db";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getAuthorizedSampleForDownload } from "@/lib/sample-download-access";
 import { sampleFilesObjectPath } from "@/lib/storage-path";
 
 export async function GET(
@@ -14,29 +14,20 @@ export async function GET(
   }
 
   const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
+  const userId = session?.user?.id ?? null;
+
+  const authz = await getAuthorizedSampleForDownload(sampleId, userId);
+  if (authz.status === "unauthorized") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const sample = await prisma.individualSample.findUnique({
-    where: { id: sampleId },
-    select: { id: true, packId: true, fileUrl: true },
-  });
-
-  if (!sample) {
+  if (authz.status === "not_found") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  const purchase = await prisma.userPurchase.findUnique({
-    where: { userId_packId: { userId, packId: sample.packId } },
-    select: { id: true },
-  });
-
-  if (!purchase) {
+  if (authz.status === "forbidden") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const { sample } = authz;
   const objectPath = sampleFilesObjectPath(sample.fileUrl);
 
   let service;

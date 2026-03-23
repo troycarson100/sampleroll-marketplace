@@ -1,9 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { stripe } from "@/lib/stripe";
+import { stripeConnectFieldsFromAccount } from "@/lib/stripe-connect-profile-fields";
 import { cn } from "@/lib/utils";
 import { StripeConnectBanner } from "@/components/creator/stripe-connect-banner";
+import { StripeConnectReturnSync } from "@/components/creator/stripe-connect-return-sync";
 
 function centsToUsd(cents: number | null | undefined) {
   const n = cents ?? 0;
@@ -53,9 +57,29 @@ export default async function CreatorDashboardPage() {
     }),
     prisma.profileMarketplace.findUnique({
       where: { id: userId },
-      select: { stripeConnectChargesEnabled: true },
+      select: {
+        stripeConnectChargesEnabled: true,
+        stripeConnectAccountId: true,
+      },
     }),
   ]);
+
+  let chargesEnabled = profileStripe?.stripeConnectChargesEnabled ?? false;
+  if (!chargesEnabled && stripe && profileStripe?.stripeConnectAccountId) {
+    try {
+      const account = await stripe.accounts.retrieve(
+        profileStripe.stripeConnectAccountId,
+      );
+      const data = stripeConnectFieldsFromAccount(account);
+      chargesEnabled = data.stripeConnectChargesEnabled;
+      await prisma.profileMarketplace.update({
+        where: { id: userId },
+        data,
+      });
+    } catch (e) {
+      console.error("[creator/dashboard] stripe sync:", e);
+    }
+  }
 
   const totalEarned = earnedAgg._sum.creatorShareCents ?? 0;
   const pending = pendingAgg._sum.creatorShareCents ?? 0;
@@ -66,9 +90,10 @@ export default async function CreatorDashboardPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4">
-      <StripeConnectBanner
-        chargesEnabled={profileStripe?.stripeConnectChargesEnabled ?? false}
-      />
+      <Suspense fallback={null}>
+        <StripeConnectReturnSync />
+      </Suspense>
+      <StripeConnectBanner chargesEnabled={chargesEnabled} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-3xl text-sr-ink">Dashboard</h1>
         <Link

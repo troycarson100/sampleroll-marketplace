@@ -6,6 +6,7 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { parseFetchJson } from "@/lib/parse-fetch-json";
 
 export function CreatorOnboardForm() {
   const router = useRouter();
@@ -43,9 +44,17 @@ export function CreatorOnboardForm() {
         fd.set("file", avatarFile);
         const up = await fetch("/api/creator/upload-avatar", {
           method: "POST",
+          credentials: "include",
           body: fd,
         });
-        const data = (await up.json()) as { url?: string; error?: string };
+        const upParsed = await parseFetchJson<{ url?: string; error?: string }>(
+          up,
+        );
+        if (!upParsed.ok) {
+          setError(upParsed.error);
+          return;
+        }
+        const data = upParsed.data;
         if (!up.ok) {
           setError(data.error ?? "Avatar upload failed");
           return;
@@ -56,6 +65,7 @@ export function CreatorOnboardForm() {
 
       const res = await fetch("/api/creator/onboard", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName,
@@ -63,7 +73,14 @@ export function CreatorOnboardForm() {
           avatarUrl: finalAvatarUrl,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const onboardParsed = await parseFetchJson<{ ok?: boolean; error?: string }>(
+        res,
+      );
+      if (!onboardParsed.ok) {
+        setError(onboardParsed.error);
+        return;
+      }
+      const data = onboardParsed.data;
       if (!res.ok) {
         setError(data.error ?? "Could not save profile");
         return;
@@ -73,12 +90,15 @@ export function CreatorOnboardForm() {
         method: "POST",
         credentials: "include",
       });
-      const stripeData = (await stripeRes.json()) as {
-        url?: string;
-        error?: string;
-      };
-      if (stripeRes.ok && stripeData.url) {
-        window.location.href = stripeData.url;
+      const stripeParsed = await parseFetchJson<{ url?: string; error?: string }>(
+        stripeRes,
+      );
+      if (
+        stripeParsed.ok &&
+        stripeRes.ok &&
+        stripeParsed.data.url
+      ) {
+        window.location.href = stripeParsed.data.url;
         return;
       }
 

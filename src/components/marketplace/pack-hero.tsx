@@ -61,19 +61,50 @@ export function PackHero({ pack, creatorDisplayName, samples }: Props) {
     return withPreview ?? samples[0];
   }, [samples]);
 
+  const demoPlaybackId = `pack-demo-${pack.id}`;
+
   function onPreview() {
+    if (pack.demo_preview_url) {
+      const subtitle = [pack.genre, ...pack.tags.slice(0, 6)]
+        .filter(Boolean)
+        .join(" · ");
+      play({
+        id: demoPlaybackId,
+        previewUrl: pack.demo_preview_url,
+        label: `${pack.title} — Demo`,
+        source: "pack_demo",
+        packId: pack.id,
+        coverUrl: pack.cover_art_url,
+        subtitle: subtitle || undefined,
+        bpm: null,
+        key: null,
+      });
+      return;
+    }
     if (!previewTarget?.preview_url) return;
     play({
       id: previewTarget.id,
       previewUrl: previewTarget.preview_url,
       label: previewTarget.filename,
+      source: "sample",
+      packId: pack.id,
+      coverUrl: pack.cover_art_url,
+      subtitle: pack.genre,
+      bpm: previewTarget.bpm,
+      key: previewTarget.musical_key,
     });
   }
 
-  const previewActive =
-    previewTarget &&
-    currentSample?.id === previewTarget.id &&
-    isPlaying;
+  const hasPreview =
+    !!pack.demo_preview_url || !!previewTarget?.preview_url;
+
+  const previewActive = pack.demo_preview_url
+    ? currentSample?.id === demoPlaybackId && isPlaying
+    : Boolean(
+        previewTarget &&
+          currentSample?.id === previewTarget.id &&
+          isPlaying,
+      );
 
   const description = pack.description?.trim();
   const needsClamp = description && description.length > 180;
@@ -134,7 +165,7 @@ export function PackHero({ pack, creatorDisplayName, samples }: Props) {
             <Button
               type="button"
               variant="ghost"
-              disabled={!previewTarget?.preview_url}
+              disabled={!hasPreview}
               onClick={onPreview}
               className={cn(
                 "ring-1 ring-white/[0.1]",

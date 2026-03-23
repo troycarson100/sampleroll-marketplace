@@ -33,8 +33,12 @@ npm run dev
 | `npm run db:run-sql -- <path.sql>` | Run a SQL file against `DATABASE_URL` via Prisma (reads `.env.local` with a small Node loader) |
 | `npm run db:pooler-host` | Prints the session pooler base URL the Supabase CLI uses (needs `supabase link` + login) |
 | `npm run dev`  | Next.js dev server             |
-| `npm run dev:clean` | Delete `.next` + `node_modules/.cache`, then dev (fixes missing `./682.js` chunk / webpack-runtime errors) |
+| `npm run clean:dev` | Delete `.next` + `node_modules/.cache` only (stop `npm run dev` first, then start dev again) |
+| `npm run dev:clean` | Same as `clean:dev`, then `next dev` on port 3001 (fixes missing `./1682.js` / webpack chunk errors) |
 | `npm run stripe:listen` | Forward Stripe webhooks to `localhost:3001/api/stripe/marketplace-webhook` (install [Stripe CLI](https://stripe.com/docs/stripe-cli); use printed `whsec_…` as `STRIPE_WEBHOOK_SECRET`) |
+| `npm run seed:mock-packs -- --creator-email <you@example.com> --source SamplePacks` | Import local audio files into published mock packs (uploads to `sample-files` + `sample-previews`) |
+
+**Pack page preview:** Creators can upload a **marketplace demo** (mixed track) on the pack editor — stored as `demo_preview_url` and used for the **Preview** button on `/sounds/packs/[id]` (separate from per-sample previews in the list).
 | `npm run build`| Production build               |
 | `npm run lint` | ESLint                         |
 
